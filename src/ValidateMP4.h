@@ -18,6 +18,13 @@ limitations under the License.
 */
 
 
+#ifndef _SRC_VALIDATE_MP4_H_
+#define _SRC_VALIDATE_MP4_H_
+
+#define _CRT_SECURE_NO_DEPRECATE
+//void myexit(int num);
+//#define exit myexit
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -56,7 +63,8 @@ typedef short OSErr;
 #define nil 0L
 
 #ifndef fieldOffset
-	#define fieldOffset(type, field) ((short) &((type *) 0)->field)
+	//#define fieldOffset(type, field) ((short) &((type *) 0)->field)   //Why on earth we would cast it to short?? Agreed most of the times it will be "short", was an error in C++
+	#define fieldOffset(type, field) ( &((type *) 0)->field)
 #endif
 
 enum {
@@ -67,6 +75,7 @@ typedef unsigned char UInt8;
 typedef char SInt8;
 typedef long SInt32;
 typedef unsigned long UInt32;
+typedef long Int32;
 typedef short SInt16;
 typedef unsigned short UInt16;
 typedef UInt32 UnsignedFixed;
@@ -196,7 +205,7 @@ enum {
 };
 
 typedef char atompathType[100];
-typedef char argstr[100];
+typedef char argstr[1000];
 
 void addAtomToPath( atompathType workingpath, OSType atomId, long atomIndex, atompathType curpath );
 void restoreAtomPath( atompathType workingpath, atompathType curpath );
@@ -264,7 +273,187 @@ typedef struct VideoSampleDescriptionInfo {
 } VideoSampleDescriptionInfo;
 
 
+// Section 8.8.8. of ISO/IEC 14496-12 4th edition
+
+typedef struct {
+    Boolean data_offset_present;
+    Boolean first_sample_flags_present;
+    Boolean sample_duration_present;
+    Boolean sample_size_present;
+    Boolean sample_flags_present;
+    Boolean sample_composition_time_offsets_present;
+
+    UInt32 version;
+    UInt32 sample_count;
+
+    UInt32 data_offset;
+    UInt32 first_sample_flags;
+    
+    UInt32 *sample_duration;
+    UInt32 *sample_size;
+    UInt32 *sample_flags;
+    UInt32 *sample_composition_time_offset; //Use it as a signed int when version is non-zero
+
+    long double *samplePresentationTime;
+    Boolean *sampleToBePresented;  //After applying edits
+    Boolean *sap3;
+    Boolean *sap4;
+    
+    UInt64  cummulatedSampleDuration;
+
+} TrunInfoRec;
+
+typedef struct {
+
+    UInt32 version;
+    UInt32 grouping_type; 
+    UInt32 grouping_type_parameter;
+    UInt32 entry_count;
+    UInt32 *sample_count; 
+    UInt32 *group_description_index;
+    
+} SbgpInfoRec;
+
+
+typedef struct {
+
+    UInt32 version;
+    UInt32 grouping_type;
+    UInt32 default_length;
+    UInt32 entry_count;
+    UInt32 *description_length;
+    UInt32 **SampleGroupDescriptionEntry;
+    
+} SgpdInfoRec;
+
+// Section 8.8.7. of ISO/IEC 14496-12 4th edition
+
+typedef struct {
+    UInt32    default_sample_duration;              
+    UInt32    default_sample_size;                
+    UInt32    default_sample_flags;               
+
+    Boolean base_data_offset_present;             
+    Boolean sample_description_index_present;     
+    Boolean default_sample_duration_present;      
+    Boolean default_sample_size_present;          
+    Boolean default_sample_flags_present;         
+    Boolean duration_is_empty;                    
+    Boolean default_base_is_moof;                 
+
+    UInt32  track_ID;                             
+    UInt64  base_data_offset;                     
+    UInt32  sample_description_index;             
+
+    UInt32 numTrun;
+    UInt32 processedTrun;
+    TrunInfoRec *trunInfo;
+    
+    UInt32 numSgpd;
+    UInt32 processedSgpd;
+    SgpdInfoRec *sgpdInfo;
+    
+    UInt32 numSbgp;
+    UInt32 processedSbgp;
+    SbgpInfoRec *sbgpInfo;
+
+    Boolean tfdtFound;
+    UInt64  baseMediaDecodeTime;
+
+    Boolean compositionInfoMissing;
+    UInt64  cummulatedSampleDuration;
+    UInt64  earliestCompositionTimeInTrackFragment;
+    UInt64  compositionEndTimeInTrackFragment;
+    UInt64  latestCompositionTimeInTrackFragment;
+    
+} TrafInfoRec;
+
+
+typedef struct {
+    UInt64 offset;
+    UInt32 index;
+    UInt32 numTrackFragments;
+    UInt32 processedTrackFragments;
+    Boolean firstFragmentInSegment;
+    Boolean samplesToBePresented;    //Is there any sample to be presented?
+    Boolean announcedSAP;   //For @minBufferTime/@bandwidth checks
+    
+    Boolean *compositionInfoMissingPerTrack;
+    
+    long double  *moofEarliestPresentationTimePerTrack;
+    long double  *moofPresentationEndTimePerTrack;
+    long double  *moofLastPresentationTimePerTrack; //Differs from moofPresentationEndTimePerTrack by the sample delta
+    
+    UInt64  *tfdt;
+    
+    TrafInfoRec *trafInfo;
+    
+    UInt32 sequence_number;
+} MoofInfoRec;
+
+typedef struct {
+    UInt8  reference_type;
+    UInt32 referenced_size;
+    UInt32 subsegment_duration;
+    UInt8  starts_with_SAP;
+    UInt8  SAP_type;
+    UInt32 SAP_delta_time;    
+} Reference;
+
+typedef struct {
+
+    UInt64 offset;
+    UInt64 size;
+    long double cumulatedDuration;
+    
+    UInt32 reference_ID;
+    UInt32 timescale; 
+    UInt64 earliest_presentation_time;
+    UInt64 first_offset;
+    UInt16 reference_count;
+    Reference *references;
+} SidxInfoRec;
+
 //===========================
+typedef struct {
+    bool segmentIndexed;
+    bool hasFragments;
+    UInt64 firstMoofIndex;
+    UInt64 lastMoofIndex;
+    bool firstInSegment;
+    long double earliestPresentationTime;
+    long double lastPresentationTime;
+    long double presentationEndTime;
+    long double sidxReportedDuration;
+    Boolean samplesToBePresented;
+	UInt64 offset;
+} LeafInfo;
+
+typedef struct {
+    UInt32  track_ID;
+    UInt32	componentSubType;
+} TrackTypeInfo;
+
+typedef struct EditListEntryVers0Record {
+    UInt32	duration;
+    UInt32	mediaTime;
+    Fixed		mediaRate;
+} EditListEntryVers0Record;
+
+typedef struct EditListEntryVers1Record {
+    UInt64	duration;
+    SInt64	mediaTime;
+    Fixed		mediaRate;
+} EditListEntryVers1Record;
+
+typedef struct HandlerInfoRecord {
+    UInt32	componentType;
+    UInt32	componentSubType;
+    UInt32	componentManufacturer;
+    UInt32	componentFlags;
+    UInt32	componentFlagsMask;
+    char    Name[1];
+} HandlerInfoRecord;
 
 typedef struct {
 	OSType mediaType;
@@ -274,6 +463,7 @@ typedef struct {
 	Fixed sampleDescWidth, sampleDescHeight;
 	UInt32	trackID;
 	UInt32	hintRefTrackID;
+    Boolean identicalDecCompTimes;
 
 	UInt32	mediaTimeScale;
 	UInt64	mediaDuration;
@@ -302,6 +492,19 @@ typedef struct {
 	UInt32 timeToSampleSampleCnt;			// number of samples described in the timeToSampleAtom
 	UInt64 timeToSampleDuration;			// duration described by timeToSampleAtom (this is Total duration of all samples, 
 											//   not a single sample's duration)
+    UInt32    default_sample_description_index;     // Section 8.3.3. of ISO/IEC 14496-12 4th edition
+    UInt32    default_sample_duration;              // Section 8.3.3. of ISO/IEC 14496-12 4th edition
+    UInt32    default_sample_size;                  // Section 8.3.3. of ISO/IEC 14496-12 4th edition
+    UInt32    default_sample_flags;                 // Section 8.3.3. of ISO/IEC 14496-12 4th edition
+
+    UInt64 cumulatedTackFragmentDecodeTime;
+
+    UInt32  numLeafs;
+    LeafInfo *leafInfo;
+    UInt32  numEdits;
+    EditListEntryVers1Record *elstInfo;
+    HandlerInfoRecord *hdlrInfo;
+
 } TrackInfoRec;
 
 int GetSampleOffsetSize( TrackInfoRec *tir, UInt32 sampleNum, UInt64 *offsetOut, UInt32 *sizeOut, UInt32 *sampleDescriptionIndexOut );
@@ -309,10 +512,22 @@ int GetChunkOffsetSize( TrackInfoRec *tir, UInt32 chunkNum, UInt64 *offsetOut, U
 
 // movie Globals
 typedef struct {
+    
+    Boolean	fragmented;
+    UInt32  numFragments;
+    UInt32  processedFragments;
+    UInt32  sequence_number;
+    UInt64  fragment_duration;
+	UInt32  mvhd_timescale;
 
 	long			numTIRs;
-	long			maxTIRs;
 	TrackInfoRec	tirList[1];
+    MoofInfoRec     *moofInfo;
+
+    UInt32  numSidx;
+    UInt32  processedSdixs;
+    SidxInfoRec     *sidxInfo;
+
 } MovieInfoRec;
 
 
@@ -342,6 +557,12 @@ typedef struct{
         UInt32 volHeight;
 } PartialVideoSC;
 
+// to process file offset info
+typedef struct{
+	UInt64 offset;
+	UInt64 sizeRemoved;
+} OffsetInfo;
+
 
 // Validate Globals
 typedef struct {
@@ -360,6 +581,46 @@ typedef struct {
 	
 	MovieInfoRec	*mir;
 
+    UInt64 *segmentSizes;
+    bool   *simsInStyp;
+    bool psshInInit;
+    bool tencInInit;
+	bool *psshFoundInSegment;
+	bool *tencFoundInSegment;
+    bool   *dsms;
+    long    segmentInfoSize;
+    long    processedStypes;
+    UInt32  accessUnitDurationNonIndexedTrack;
+    bool    initializationSegment;
+    bool    checkSegAlignment;
+    bool    checkSubSegAlignment;
+    int  startWithSAP;
+    long double  minBufferTime;
+    SInt64  bandwidth;
+    unsigned int  width;
+    unsigned int  height;
+    argstr codecs;
+    argstr indexRange;
+    int lowerindexRange;
+    int higherindexRange;
+    unsigned int audioChValue;
+	bool	suggestBandwidth;
+    bool    isoLive;
+    bool    isoondemand;
+    bool    isomain;
+    bool    dynamic;
+    bool    subRepLevel;
+    bool    bss;
+    bool    dash264base;
+    bool    dash264enc;
+    unsigned int  numControlTracks;
+    unsigned int  *numControlLeafs;
+    LeafInfo **controlLeafInfo;
+    TrackTypeInfo *trackTypeInfo;
+
+	unsigned int numOffsetEntries;
+	OffsetInfo *offsetEntries;
+
 	// -----
 	atompathType atompath;
 
@@ -367,12 +628,16 @@ typedef struct {
 	argstr	checklevelstr;
 	argstr	samplenumberstr;
 	argstr	printtypestr;
+	argstr	segmentOffsetInfo;
 
 	long	filetype;
 	long	checklevel;
 	long	samplenumber;
 
 	long	majorBrand;
+	Boolean	dashSegment;
+    Boolean dashInFtyp;
+    Boolean msixInFtyp;
 
 	Boolean	print_atompath;
 	Boolean	print_atom;
@@ -421,6 +686,8 @@ void sampleprintnotab(const char *formatStr, ...);
 void sampleprinthexdata(char *dataP, UInt32 size);
 void sampleprinthexandasciidata(char *dataP, UInt32 size);
 void toggleprintatom( Boolean onOff );
+void loadLeafInfo(char *leafInfoFileName);
+void loadOffsetInfo(char *offsetsFileName);
 void toggleprintatomdetailed( Boolean onOff );
 void toggleprintsample( Boolean onOff );
 void copyCharsToStr( char *chars, char *str, UInt16 count );
@@ -641,6 +908,8 @@ OSErr Validate_iods_OD_Bits( Ptr dataP, unsigned long dataSize, Boolean fileForm
 
 int FindAtomOffsets( atomOffsetEntry *aoe, UInt64 startOffset, UInt64 maxOffset, 
 			long *atomCountOut, atomOffsetEntry **atomOffsetsOut );
+UInt64 getAdjustedFileOffset(UInt64 offset64);
+UInt64 inflateOffset(UInt64 offset64);
 int GetFileDataN64( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 *newoffset64 );
 int GetFileDataN32( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 *newoffset64 );
 int GetFileDataN16( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 *newoffset64 );
@@ -666,10 +935,14 @@ OSErr Validate_mvhd_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_trak_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_iods_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_moof_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_traf_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_pssh_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_dinf_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_minf_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_mdia_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_stbl_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_mvex_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_cprt_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_loci_Atom( atomOffsetEntry *aoe, void *refcon );
 
@@ -701,6 +974,20 @@ OSErr Validate_stsz_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_stz2_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_stco_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_padb_Atom( atomOffsetEntry *aoe, void *refcon );
+
+OSErr Validate_trex_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_mehd_Atom( atomOffsetEntry *aoe, void *refcon );
+
+OSErr Validate_mfhd_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_tfhd_Atom( atomOffsetEntry *aoe, void *refcon );
+
+OSErr Validate_trun_Atom( atomOffsetEntry *aoe, void *refcon );
+
+OSErr Validate_sbgp_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_sgpd_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_emsg_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_tfdt_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_sidx_Atom( atomOffsetEntry *aoe, void *refcon );
 
 OSErr Validate_edts_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_elst_Atom( atomOffsetEntry *aoe, void *refcon );
@@ -752,7 +1039,7 @@ OSErr ValidateAtomOfType( OSType theType, long flags, ValidateAtomTypeProcPtr va
 		long cnt, atomOffsetEntry *list, void *refcon );
 
 #define FieldMustBe( num, value, errstr ) \
-	do { if ((num) != (value)) { err = badAtomErr; errprint(errstr "\n", (value), num); }} while (false)
+do { if ((num) != (value)) { err = badAtomErr; warnprint(errstr "\n", (value), num); } } while (false)
 
 #define FieldCheck( _condition_, errstr ) \
 	do { if (!(_condition_)) { err = badAtomErr; errprint(errstr "\n"); }} while (false)
@@ -835,17 +1122,20 @@ typedef OSErr (*ValidateBitstreamProcPtr)( BitBuffer *bb, void *refcon );
 
 OSErr Validate_ESDAtom( atomOffsetEntry *aoe, void *refcon, ValidateBitstreamProcPtr validateBitstreamProc, char *esname );
 OSErr Validate_mp4_SD_Entry( atomOffsetEntry *aoe, void *refcon, ValidateBitstreamProcPtr validateBitstreamProc, char *esname );
+OSErr Validate_mhaC_Atom( atomOffsetEntry *aoe, void *refcon );
 
 OSErr Validate_avcC_Atom( atomOffsetEntry *aoe, void *refcon, char *esname );
 OSErr Validate_btrt_Atom( atomOffsetEntry *aoe, void *refcon, char *esname );
 OSErr Validate_m4ds_Atom( atomOffsetEntry *aoe, void *refcon, char *esname );
 
 OSErr Validate_ftyp_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_styp_Atom( atomOffsetEntry *aoe, void *refcon );
 
 OSErr Validate_sinf_Atom( atomOffsetEntry *aoe, void *refcon, UInt32 flags );
 OSErr Validate_frma_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_schm_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_schi_Atom( atomOffsetEntry *aoe, void *refcon );
+OSErr Validate_tenc_Atom( atomOffsetEntry *aoe, void *refcon );
 
 OSErr Validate_meta_Atom( atomOffsetEntry *aoe, void *refcon );
 OSErr Validate_xml_Atom ( atomOffsetEntry *aoe, void *refcon );
@@ -869,4 +1159,6 @@ OSErr Get_mdia_hdlr_mediaType( atomOffsetEntry *aoe, TrackInfoRec *tir );
 
 
 void dispose_mir( MovieInfoRec *mir );
+
+#endif  //#ifndef _SRC_VALIDATE_MP4_H_
 

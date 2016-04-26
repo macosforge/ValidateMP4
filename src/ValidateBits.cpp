@@ -30,10 +30,10 @@ OSErr BitBuffer_Init(BitBuffer *bb, UInt8 *p, UInt32 length)
 		goto bail;
 	}
 
-	bb->ptr = (void*)p;
+	bb->ptr = (UInt8*)p;
 	bb->length = length;
 	
-	bb->cptr = (void*)p;
+	bb->cptr = (UInt8*)p;
 	bb->cbyte = *bb->cptr;
 	bb->curbits = 8;
 	

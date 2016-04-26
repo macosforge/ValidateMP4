@@ -16,6 +16,7 @@ Please see the License for the specific language governing rights and
 limitations under the License.
 
 */
+
  
 #include "ValidateMP4.h"
 
@@ -97,7 +98,7 @@ OSErr Validate_iods_OD_Bits( Ptr odDataP, unsigned long odSize, Boolean fileForm
 	
 	bb = &thebb;
 	
-	BitBuffer_Init(bb, (void *)odDataP, odSize);
+	BitBuffer_Init(bb, (UInt8 *)((void *)odDataP), odSize);
 
 	BAILIFERR( GetDescriptorTagAndSize(bb, &iodTag, &iodSize) );
 	atomprintnotab("\ttag=\"0x%2.2x\" size=\"%d\"\n", iodTag, iodSize);
@@ -195,18 +196,18 @@ OSErr Validate_iods_OD_Bits( Ptr odDataP, unsigned long odSize, Boolean fileForm
 						"High Efficiency AAC@L5" };
 		VALIDATE_FIELD  ("%2.2x",  ODProfileLevelIndication, 8 );
 		if (ODProfileLevelIndication!=0xFF)
-			errprint("Validate_IODS: ISMA expects no-capability(0xFF) for ODProfileLevelIndication\n");
+			warnprint("Validate_IODS: ISMA expects no-capability(0xFF) for ODProfileLevelIndication\n");
 
 		VALIDATE_FIELD  ("%2.2x",  sceneProfileLevelIndication, 8 );
 		if (sceneProfileLevelIndication!=0xFF)
-			errprint("Validate_IODS: ISMA expects no-capability(0xFF) for sceneProfileLevelIndication\n");
+			warnprint("Validate_IODS: ISMA expects no-capability(0xFF) for sceneProfileLevelIndication\n");
 
 		VALIDATE_FIELD  ("%2.2x",  audioProfileLevelIndication, 8 );
 		if ((audioProfileLevelIndication!=0xFF) && 
 			(audioProfileLevelIndication!=0x0F) && 
 			(audioProfileLevelIndication!=0x0E) &&
 			(audioProfileLevelIndication!=0x2a) && (audioProfileLevelIndication!=0x2c))
-			errprint("Validate_IODS: ISMA expects no-capability(0xFF) or Hi-Quality@L1/L2 (0x0E, 0x0F) or AAC@L4 (0x2a) or HE-AAC@L2 (0x2c) for audioProfileLevelIndication\n");
+			warnprint("Validate_IODS: ISMA expects no-capability(0xFF) or Hi-Quality@L1/L2 (0x0E, 0x0F) or AAC@L4 (0x2a) or HE-AAC@L2 (0x2c) for audioProfileLevelIndication\n");
 		if (audioProfileLevelIndication<(sizeof(audio_profiles)/sizeof(char*))) 
 			atomprint("  Comment=\"audio profile/level is %s\"\n",audio_profiles[audioProfileLevelIndication]);
 	
@@ -217,7 +218,7 @@ OSErr Validate_iods_OD_Bits( Ptr odDataP, unsigned long odSize, Boolean fileForm
 			(!( (visualProfileLevelIndication>=0xf0) && (visualProfileLevelIndication<=0xf3) )) &&
 			(visualProfileLevelIndication!=0xF7) &&
 			(visualProfileLevelIndication!=0x7F))
-			errprint("Validate_IODS: ISMA expects no-capability(0xFF) or Simple@L0-3 (0x08,01-03) or AdvSimple@L0-3b (0xF0-3,0xF7), or AVC (0x7f) for visualProfileLevelIndication\n");
+			warnprint("Validate_IODS: ISMA expects no-capability(0xFF) or Simple@L0-3 (0x08,01-03) or AdvSimple@L0-3b (0xF0-3,0xF7), or AVC (0x7f) for visualProfileLevelIndication\n");
 		if( visualProfileLevelIndication != vg.visualProfileLevelIndication) {
 		  if( vg.visualProfileLevelIndication == 0xFF )
 			errprint("Validate_IODS: visualProfileLevelIndication ( IOD: %lu (0x%2.2x) ) signalled .. but there seems to be no video track\n",visualProfileLevelIndication, visualProfileLevelIndication);
@@ -227,7 +228,7 @@ OSErr Validate_iods_OD_Bits( Ptr odDataP, unsigned long odSize, Boolean fileForm
 
 		VALIDATE_FIELD  ("%2.2x",  graphicsProfileLevelIndication, 8 );
 		if (graphicsProfileLevelIndication!=0xFF)
-			errprint("Validate_IODS: ISMA expects no-capability(0xFF) for graphicsProfileLevelIndication\n");
+			warnprint("Validate_IODS: ISMA expects no-capability(0xFF) for graphicsProfileLevelIndication\n");
 
 		atomprint(">\n");
 
@@ -501,7 +502,7 @@ OSErr Validate_ES_Descriptor(BitBuffer *inbb, UInt8 Expect_ObjectType, UInt8 Exp
             UInt32 auSize = base64Size;	// more than enough, will be adjusted down
             Ptr auDataP = NULL;
             
-            BAILIFNIL( auDataP = malloc(auSize), allocFailedErr );
+            BAILIFNIL( auDataP = (Ptr)malloc(auSize), allocFailedErr );
             
             err = Base64DecodeToBuffer(base64P, &base64Size, auDataP, &auSize);
             if (err) {
@@ -509,7 +510,7 @@ OSErr Validate_ES_Descriptor(BitBuffer *inbb, UInt8 Expect_ObjectType, UInt8 Exp
             } else {
                 BitBuffer aubb;
                 
-                BitBuffer_Init(&aubb, (void *)auDataP, auSize);
+                BitBuffer_Init(&aubb, (UInt8 *)((void *)auDataP), auSize);
                 
                 if (strncmp(urlString, urlStartODAU, strlen(urlStartODAU)) == 0) {
                     Validate_odsm_sample_Bitstream( &aubb, NULL );
@@ -1251,7 +1252,7 @@ OSErr Validate_VideoSpecificInfo(  BitBuffer *bb, UInt32 expect_startcode, UInt8
 	UInt32 startcode;
 	UInt8 profileLevelInd, zeroBit;
 	UInt8 voVerID;
-	PartialVideoSC *p_vsc = p_sc;
+	PartialVideoSC *p_vsc = (PartialVideoSC *)p_sc;
 	
 	voVerID = default_voVerID;
 	
@@ -1732,6 +1733,8 @@ OSErr Validate_level_IDC( UInt8 profile, UInt8 level, UInt8 constraint_set3_flag
 		else if (constraint_set3_flag == 1) 
 				  warnprint("Warning: constraint_set3_flag==1 when it seems to be reserved to zero\n");
 	}
+
+	return noErr;
 }
 
 OSErr Validate_AVCConfigRecord( BitBuffer *bb, void *refcon )
@@ -1995,7 +1998,7 @@ OSErr Validate_NAL_Unit(  BitBuffer *inbb, UInt8 expect_type, UInt32 nal_length 
 					for( i = 0; i < 8; i++ ) {		
 						VALIDATE_INDEX_FIELD1( "%d", seq_scaling_list_present_flag, 1, i);
 						if( seq_scaling_list_present_flag )	{
-							UInt8 sizeOfScalingList, j, useDefaultScalingMatrixFlag;
+							UInt8 sizeOfScalingList, j, useDefaultScalingMatrixFlag = 0;
 							UInt32 lastScale, nextScale;
 							SInt32 delta_scale;
 							
@@ -2239,7 +2242,7 @@ OSErr Validate_NAL_Unit(  BitBuffer *inbb, UInt8 expect_type, UInt32 nal_length 
 					for( i = 0; i < 8; i++ ) {		
 						VALIDATE_INDEX_FIELD1( "%d", pic_scaling_list_present_flag, 1, i);
 						if( pic_scaling_list_present_flag )	{
-							UInt8 sizeOfScalingList, j, useDefaultScalingMatrixFlag;
+							UInt8 sizeOfScalingList, j, useDefaultScalingMatrixFlag=0;
 							UInt32 lastScale, nextScale;
 							SInt32 delta_scale;
 							
@@ -2407,7 +2410,7 @@ OSErr Validate_DecSpecific_Descriptor( BitBuffer *inbb, UInt8 ObjectType, UInt8 
 			break;
 	}
 	
-	if (bb->bits_left != 0) errprint("Validate DecoderSpecificInfo didn't use %ld bits\n", bb->bits_left);
+	if (bb->bits_left != 0) warnprint("Validate DecoderSpecificInfo didn't use %ld bits\n", bb->bits_left);
 
 	err = SkipBytes(inbb, size); if (err) goto bail;
 	
@@ -2510,7 +2513,7 @@ OSErr Validate_Random_Descriptor(BitBuffer *bb, char* dname)
 			atomprintnotab("\ttag=\"0x%2.2x\" size=\"%d\">\n", tag, size);
 			atomprint("<comment descriptor tag is %s />\n",tagname);
 			
-			atomprinthexdata((void*)bb->cptr, size);
+			atomprinthexdata((char *)((void*)bb->cptr), size);
 			atomprint("/>\n");
 			
 			
@@ -2546,7 +2549,6 @@ OSErr Validate_Extension_DescriptorPointer(BitBuffer *bb)
 
 OSErr Validate_soun_ES_Bitstream( BitBuffer *bb, void *refcon )
 {
-	TrackInfoRec *tir = (TrackInfoRec *)refcon;
 	OSErr err;
 
 	atomprint("\n");
@@ -2653,7 +2655,7 @@ OSErr Validate_sdsm_sample_Bitstream( BitBuffer *bb, void *refcon )
 	if (err) goto bail;
 	sampleprint("<comment BIFS command is %s />\n",commands[command]);
 	
-	sampleprinthexdata((void*)bb->cptr, bb->length);
+	sampleprinthexdata((char *)((void*)bb->cptr), bb->length);
 
 	err = SkipBytes(bb, bb->length); if (err) goto bail;
 
@@ -2755,7 +2757,7 @@ OSErr Validate_odsm_sample_Bitstream( BitBuffer *bb, void *refcon )
 		else errprint("Validate_odsm_sample_Bitstream: OD Stream uses forbidden command 0x%x\n",esTag);
 			
 		if (printed == 0) {
-			sampleprinthexdata((void*)bb->cptr, esSize);
+			sampleprinthexdata((char *)((void*)bb->cptr), esSize);
 			err = SkipBytes(bb, esSize); if (err) goto bail;
 		}
 		--vg.tabcnt; 
@@ -2786,7 +2788,7 @@ OSErr Validate_vide_sample_Bitstream( BitBuffer *bb, void *refcon )
 	
 	sampleDescription = tir->sampleDescriptions[tir->currentSampleDescriptionIndex];
 	if (sampleDescription->head.sdType == 'avc1') {
-	   while (bb->bits_left>0) {
+	   while (bb->bits_left > 0) {
 			UInt32 nsize, size_field;
 			size_field = codec_specific[0];
 			nsize = GetBits(bb, size_field * 8, &err); if (err) goto bail;	
@@ -2795,7 +2797,7 @@ OSErr Validate_vide_sample_Bitstream( BitBuffer *bb, void *refcon )
 	   }
 	} else
 	{
-		sampleprinthexdata((void*)bb->ptr, bb->length);
+		sampleprinthexdata((char *)((void*)bb->ptr), bb->length);
 		// assumes the entire bit buffer is the sample
 		err = SkipBytes(bb, bb->length); if (err) goto bail;
 	}
@@ -2815,17 +2817,14 @@ bail:
 
 OSErr Validate_soun_sample_Bitstream( BitBuffer *bb, void *refcon )
 {
-	TrackInfoRec *tir = (TrackInfoRec *)refcon;
-	OSErr err;
-	UInt32* codec_specific;
-	
+	OSErr err;	
 
 // data from ES & state info is in tir->validatedSampleDescriptionRefCons
 //    for global refcon use [0]
 		
-	sampleprinthexdata((void*)bb->ptr, bb->length);
+	sampleprinthexdata((char *)((void*)bb->ptr), bb->length);
 	// assumes the entire bb is the sample
-	codec_specific = &((tir->validatedSampleDescriptionRefCons)[tir->currentSampleDescriptionIndex - 1]);
+	//codec_specific = &((tir->validatedSampleDescriptionRefCons)[tir->currentSampleDescriptionIndex - 1]);
 	
 	err = SkipBytes(bb, bb->length); if (err) goto bail;
 
@@ -2847,7 +2846,7 @@ bail:
 
 OSErr CheckValuesInContext( UInt32 bufferSize, UInt32 maxBitrate, UInt32 avgBitrate, void *p_sc )
 {
-  PartialVideoSC *p_vsc = (void*)p_sc;
+  PartialVideoSC *p_vsc = (PartialVideoSC*)p_sc;
   OSErr err = noErr;
   char profString[100];
   int limitBitrate = 0;
@@ -2927,7 +2926,7 @@ OSErr CheckValuesInContext( UInt32 bufferSize, UInt32 maxBitrate, UInt32 avgBitr
 
   fps_max = p_vsc->maxMBsec/ (widthMB * heightMB);
 
-  if( maxBitrate > limitBitrate || bufferSize > limitBufferSize){
+  if( maxBitrate > (UInt32)limitBitrate || bufferSize > (UInt32)limitBufferSize){
     err = 2;
     errprint("CheckValuesInContext: video profile limitations exceeded .. profile is %s  max bitrate is= %lu (limit is %lu)  buffer size is= %lu (limit is %lu) \n",
              profString, maxBitrate, limitBitrate, bufferSize, limitBufferSize);

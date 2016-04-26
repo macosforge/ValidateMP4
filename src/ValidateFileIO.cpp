@@ -17,9 +17,47 @@ limitations under the License.
 
 */
 
+
 #include "ValidateMP4.h"
 
+UInt64 getAdjustedFileOffset(UInt64 offset64)
+{
+	UInt64 adjustedOffset = offset64;
 
+	if (vg.numOffsetEntries > 0)
+	{
+		unsigned int index = 0;
+		for (index = 0; offset64 > vg.offsetEntries[index].offset; index++)
+		{
+			adjustedOffset -= vg.offsetEntries[index].sizeRemoved;
+		}
+		if (index > 0)
+			if (offset64 <= (vg.offsetEntries[index - 1].offset + vg.offsetEntries[index - 1].sizeRemoved-1))
+			{
+			fprintf(stderr, "Program error! Requested infomration is at offset %llu, which is in a removed region at index %d (offset: %llu, removed size: %llu), exiting!", offset64, index, vg.offsetEntries[index - 1].offset, vg.offsetEntries[index - 1].sizeRemoved);
+			exit(-1);
+			}
+	}
+
+	return adjustedOffset;
+}
+
+UInt64 inflateOffset(UInt64 offset64)
+{
+	UInt64 adjustedOffset = offset64;
+
+	if (vg.numOffsetEntries > 0)
+	{
+		unsigned int index = 0;
+
+		for (index = 0; adjustedOffset >= vg.offsetEntries[index].offset; index++)
+		{
+			adjustedOffset += vg.offsetEntries[index].sizeRemoved;
+		}
+	}
+
+	return adjustedOffset;
+}
 //==========================================================================================
 
 int GetFileData( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 size64, UInt64 *newoffset64 )
@@ -34,8 +72,8 @@ int GetFileData( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 size
 		err = noCanDoErr;
 		goto bail;
 	}
-	
-	err = fseek( vg.inFile, offset64, SEEK_SET );
+    
+	err = fseek(vg.inFile, getAdjustedFileOffset(offset64), SEEK_SET);
 	if (err) goto bail;
 	
 	amtRead = fread( dataP, 1, size, vg.inFile );
@@ -45,6 +83,43 @@ int GetFileData( atomOffsetEntry *aoe, void *dataP, UInt64 offset64, UInt64 size
 	}
 
 	if (newoffset64) *newoffset64 = offset64 + size;
+
+    /*{
+        static int first = 1, count = 0;
+        static FILE* dbg;
+
+        if(count < 2048)
+        {
+            if(first)
+            {
+                dbg = fopen("debug.bin","wb");
+                if(!dbg)
+                    fprintf(stderr,"Could not open debug.bin!\n");
+            }
+            else
+            {
+                dbg = fopen("debug.bin","a");
+                if(!dbg)
+                    fprintf(stderr,"Could not open debug.bin for appending!\n");
+            }
+
+            if(dbg)
+            {
+                for(int index = 0 ; index < size ; index ++)
+                {
+                    fwrite (&(((unsigned char *)dataP)[index]),1,1,dbg);
+                    if(count < 100);
+                        //printf("%c ",(((unsigned char *)dataP)[index]));
+                }
+                    
+                count += size;
+            }
+
+        fclose(dbg);
+        }
+        first = 0;
+    }*/
+
 bail:
 	return err;
 }
@@ -109,7 +184,7 @@ int GetFileCString( atomOffsetEntry *aoe, char **strP, UInt64 offset64, UInt64 m
 		*(++sp) = '\0'; scnt++;
 	}
 
-	BAILIFNIL( *strP = malloc(scnt), allocFailedErr );
+	BAILIFNIL( *strP = (char *)malloc(scnt), allocFailedErr );
 	memcpy(*strP, &str[0], scnt);
 	
 bail:
@@ -184,7 +259,7 @@ int GetFileBitStreamDataToEndOfAtom( atomOffsetEntry *aoe, Ptr *bsDataPout, UInt
 	Ptr bsDataP = nil;
 
 	bsSize = aoe->size - (offset64 - aoe->offset);
-	BAILIFNIL( bsDataP = calloc(bsSize + bitParsingSlop, 1), allocFailedErr );
+	BAILIFNIL( bsDataP = (Ptr)calloc(bsSize + bitParsingSlop, 1), allocFailedErr );
 	BAILIFERR( GetFileData( aoe, bsDataP, offset64, bsSize, newoffset64 ) );
 
 bail:
@@ -312,7 +387,7 @@ int GetFileStartCode( atomOffsetEntry *aoe, UInt32 *startCode, UInt64 offset64, 
 		goto bail;
 	}
 	
-	err = fseek( vg.inFile, offset64, SEEK_SET );
+	err = fseek(vg.inFile, getAdjustedFileOffset(offset64), SEEK_SET);
 	if (err) goto bail;
 	
 	bits = fgetc( vg.inFile ); curoffset++;

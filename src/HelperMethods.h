@@ -1,6 +1,4 @@
 /*
-	File:		ValidateMP4.r
-
 
 This file contains Original Code and/or Modifications of Original Code
 as defined in and that are subject to the Apple Public Source License
@@ -17,10 +15,26 @@ FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
 Please see the License for the specific language governing rights and
 limitations under the License.
 
-
-	$Log$	
-
 */
 
-#include "QTVersion.r"
+
+#ifndef _SRC_HELPER_METHODS_H_
+#define _SRC_HELPER_METHODS_H_
+
+#include "ValidateMP4.h"
+
+#define ABS(a) (((a) < 0) ? -(a) : (a));
+
+int FindAtomOffsets( atomOffsetEntry *aoe, UInt64 minOffset, UInt64 maxOffset, 
+			long *atomCountOut, atomOffsetEntry **atomOffsetsOut );
+TrackInfoRec * check_track( UInt32 theID );
+UInt32 getTrakIndexByID(UInt32 track_ID);
+UInt32 getMoofIndexByOffset(MoofInfoRec *moofInfo, UInt32 numFragments, UInt64 offset);
+UInt32 getSgpdIndex(SgpdInfoRec *sgpd, UInt32 numSgpd, UInt32 grouping_type);
+SidxInfoRec *getSidxByOffset(SidxInfoRec *sidxInfo, UInt32 numSidx, UInt64 offset);
+bool checkSegmentBoundry(UInt64 offsetLow, UInt64 offsetHigh);
+int getSegmentNumberByOffset(UInt64 offset);
+void logLeafInfo(MovieInfoRec *mir);
+
+#endif //#define _SRC_HELPER_METHODS_H_
 
