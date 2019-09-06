@@ -1162,7 +1162,7 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 	//  if that is beyond the highest chunk end we have seen, we append it;  otherwise (the rare case)
 	//   we insert it into the sorted list.  this gives us a rapid check and an output sorted list without
 	//   an n-squared overlap check and without a post-sort
-	//if (mir->numTIRs > 0)
+	if (mir->numTIRs > 0)
 	{
 		UInt32 totalChunks = 0;
 		TrackInfoRec *tir;
