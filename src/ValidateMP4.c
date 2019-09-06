@@ -658,30 +658,14 @@ char *int64toxstr_r(UInt64 num, char * str)
 char *int64todstr(UInt64 num)
 {
 	static char str[40];
-	UInt32 hi,lo;
-	
-	hi = num>>32;
-	lo = num&(0xffffffff);
-	
-	if (hi) 
-		sprintf(str,"%ld%8.8ld",(unsigned long) hi,(unsigned long) lo);
-	else
-		sprintf(str,"%ld",(unsigned long) lo);
+	sprintf(str,"%lld",(long long) num);
 	return str;
 }
 
 
 char *int64todstr_r(UInt64 num, char * str)
 {
-	UInt32 hi,lo;
-	
-	hi = num>>32;
-	lo = num&(0xffffffff);
-	
-	if (hi) 
-		sprintf(str,"%ld%8.8ld",(unsigned long) hi,(unsigned long) lo);
-	else
-		sprintf(str,"%ld",(unsigned long) lo);
+	sprintf(str,"%lld",(long long) num);
 	return str;
 }
 
