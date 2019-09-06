@@ -382,7 +382,7 @@ void atomprintnotab(const char *formatStr, ...)
 	va_list 		ap;
 	va_start(ap, formatStr);
 	
-	//if (vg.printatom) 
+	if (vg.printatom) 
 	{
 		vfprintf( _stdout, formatStr, (void *)ap );
 	}
