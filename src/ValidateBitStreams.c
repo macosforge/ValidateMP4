@@ -1732,6 +1732,7 @@ OSErr Validate_level_IDC( UInt8 profile, UInt8 level, UInt8 constraint_set3_flag
 		else if (constraint_set3_flag == 1) 
 				  warnprint("Warning: constraint_set3_flag==1 when it seems to be reserved to zero\n");
 	}
+	return noErr;
 }
 
 OSErr Validate_AVCConfigRecord( BitBuffer *bb, void *refcon )
@@ -1780,7 +1781,7 @@ OSErr Validate_AVCConfigRecord( BitBuffer *bb, void *refcon )
 	avcHeader.lengthsize = GetBits(bb, 8, &err); if (err) goto bail;
 
 	if ((avcHeader.lengthsize & 0xFC) != 0xFC) {
-		errprint( "reserved 1 bits are not 1 %x", avcHeader.lengthsize && 0xFC );
+		errprint( "reserved 1 bits are not 1 %x", avcHeader.lengthsize & 0xFC );
 	}
 	avcHeader.lengthsize = avcHeader.lengthsize & 3;
 	codec_specific[0] = avcHeader.lengthsize + 1;
@@ -1791,7 +1792,7 @@ OSErr Validate_AVCConfigRecord( BitBuffer *bb, void *refcon )
 	
 	avcHeader.sps_count = GetBits(bb, 8, &err); if (err) goto bail;
 	if ((avcHeader.sps_count & 0xE0) != 0xE0) {
-		errprint( "reserved 1 bits are not 1 %x", avcHeader.sps_count && 0xE0 );
+		errprint( "reserved 1 bits are not 1 %x", avcHeader.sps_count & 0xE0 );
 	}
 	avcHeader.sps_count = avcHeader.sps_count & 0x1F;
 	atomprint("sps_count=\"%d\"\n", avcHeader.sps_count  );
@@ -2916,7 +2917,7 @@ OSErr CheckValuesInContext( UInt32 bufferSize, UInt32 maxBitrate, UInt32 avgBitr
     break;
 
   default:
-    sprintf(profString,"WARNING: unknown visual profile= %lu\n",p_vsc->profileLevelInd);
+    sprintf(profString,"WARNING: unknown visual profile= %lu\n",(unsigned long) p_vsc->profileLevelInd);
     if( p_vsc->profileLevelInd == 255 ){
       err = 1;
       errprint("invalid visual profile= %lu\n",p_vsc->profileLevelInd);

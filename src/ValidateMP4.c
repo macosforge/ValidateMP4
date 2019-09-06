@@ -382,7 +382,8 @@ void atomprintnotab(const char *formatStr, ...)
 	va_list 		ap;
 	va_start(ap, formatStr);
 	
-	if (vg.printatom) {
+	//if (vg.printatom) 
+	{
 		vfprintf( _stdout, formatStr, (void *)ap );
 	}
 	
@@ -631,9 +632,9 @@ char *int64toxstr(UInt64 num)
 	hi = num>>32;
 	lo = num&(0xffffffff);
 	if (hi) {
-		sprintf(str,"0x%lx%8.8lx",hi,lo);
+		sprintf(str,"0x%lx%8.8lx",(unsigned long) hi,(unsigned long) lo);
 	} else {
-		sprintf(str,"0x%lx",lo);
+		sprintf(str,"0x%lx",(unsigned long) lo);
 	}
 	return str;
 }
@@ -645,9 +646,9 @@ char *int64toxstr_r(UInt64 num, char * str)
 	hi = num>>32;
 	lo = num&(0xffffffff);
 	if (hi) {
-		sprintf(str,"0x%lx%8.8lx",hi,lo);
+		sprintf(str,"0x%lx%8.8lx",(unsigned long) hi,(unsigned long) lo);
 	} else {
-		sprintf(str,"0x%lx",lo);
+		sprintf(str,"0x%lx",(unsigned long) lo);
 	}
 	return str;
 }
@@ -663,9 +664,9 @@ char *int64todstr(UInt64 num)
 	lo = num&(0xffffffff);
 	
 	if (hi) 
-		sprintf(str,"%ld%8.8ld",hi,lo);
+		sprintf(str,"%ld%8.8ld",(unsigned long) hi,(unsigned long) lo);
 	else
-		sprintf(str,"%ld",lo);
+		sprintf(str,"%ld",(unsigned long) lo);
 	return str;
 }
 
@@ -678,9 +679,9 @@ char *int64todstr_r(UInt64 num, char * str)
 	lo = num&(0xffffffff);
 	
 	if (hi) 
-		sprintf(str,"%ld%8.8ld",hi,lo);
+		sprintf(str,"%ld%8.8ld",(unsigned long) hi,(unsigned long) lo);
 	else
-		sprintf(str,"%ld",lo);
+		sprintf(str,"%ld",(unsigned long) lo);
 	return str;
 }
 
@@ -689,7 +690,7 @@ char *langtodstr(UInt16 num)
 {
 	static char str[4];
 
-	str[4] = 0;
+	str[3] = 0;
 	
 	if (num==0) {
 		str[0] = str[1] = str[2] = ' ';
