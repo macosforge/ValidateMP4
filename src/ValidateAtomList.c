@@ -125,7 +125,7 @@ OSErr ValidateFileAtoms( atomOffsetEntry *aoe, void *refcon )
 	BAILIFERR( FindAtomOffsets( aoe, minOffset, maxOffset, &cnt, &list ) );
 	
 	// Process 'ftyp' atom
-
+	
 	atomerr = ValidateAtomOfType( 'ftyp', kTypeAtomFlagMustHaveOne | kTypeAtomFlagCanHaveAtMostOne | kTypeAtomFlagMustBeFirst, 
 		Validate_ftyp_Atom, cnt, list, nil );
 	if (!err) err = atomerr;
@@ -1048,7 +1048,7 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 		if (entry->type == 'trak') {
 			++(mir->numTIRs);
 			atomerr = Get_trak_Type(entry, &(mir->tirList[thisTrakIndex]));
-			entry->refconOverride = (long)&(mir->tirList[thisTrakIndex]);
+			entry->refconOverride = (void*)&(mir->tirList[thisTrakIndex]);
 			++thisTrakIndex;
 		}
 	}
@@ -1162,6 +1162,7 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 	//  if that is beyond the highest chunk end we have seen, we append it;  otherwise (the rare case)
 	//   we insert it into the sorted list.  this gives us a rapid check and an output sorted list without
 	//   an n-squared overlap check and without a post-sort
+	if (mir->numTIRs > 0)
 	{
 		UInt32 totalChunks = 0;
 		TrackInfoRec *tir;
@@ -1187,7 +1188,7 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 			
 		}
 		BAILIFNULL( corp = calloc(totalChunks,sizeof(chunkOverlapRec)), allocFailedErr );
-		
+				
 		highwatermark = 0;		// the highest chunk end seen
 
 		do { // until we have processed all chunks of all tracks
@@ -1211,8 +1212,11 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 					}
 				}
 			}
-			if (lowest == -1) 
+			
+			if (lowest == -1) {
 				errprint("aargh: program error!!!\n");
+				BAILIFERR( programErr );
+			}
 						
 			tir = &(mir->tirList[lowest]);
 			BAILIFERR( GetChunkOffsetSize(tir, trk[lowest].chunk_num, &chunkOffset, &chunkSize, nil) );
@@ -1223,7 +1227,10 @@ OSErr Validate_moov_Atom( atomOffsetEntry *aoe, void *refcon )
 			}
 			chunkStop = chunkOffset + chunkSize -1;
 			
-			if (chunkOffset != low_offset) errprint("Aargh! program error\n");
+			if (chunkOffset != low_offset) {
+				errprint("Aargh! program error\n");
+				BAILIFERR( programErr );
+			}
 			
 			if (chunkOffset >= vg.inMaxOffset) 
 			{

@@ -664,7 +664,7 @@ static OSErr Validate_Data_Entry( HintInfoRec *hir, char *inEntry )
 					goto bail;
 				}
 
-				BAILIFERR( err = get_track_sample(thisTIR, sampleNum, &sampleData, &sampleDataLength, NULL) );
+				BAILIFERR( get_track_sample(thisTIR, sampleNum, &sampleData, &sampleDataLength, NULL) );
 				if (offset+length >sampleDataLength) {
 					errprint("[2] data entry - offset(%d) + length(%d) > samplelength (%d)\n", offset, length, sampleDataLength);
 					err = paramErr;
@@ -735,7 +735,7 @@ static OSErr Validate_rfc3016_Payload( char *inPayload, UInt32 inLength, void *i
 
 	BitBuffer_Init(&bb, (void *)inPayload, inLength);
 	if (BitBuffer_IsVideoStartCode(&bb)) {
-		BAILIFERR( err = BitBuffer_GetVideoStartCode(&bb, &startCodeTag) );
+		BAILIFERR( BitBuffer_GetVideoStartCode(&bb, &startCodeTag) );
 		switch (startCodeTag) {
 			case kMPEG4StartCode_VOS:
 			case kMPEG4StartCode_GOV:
@@ -1748,7 +1748,7 @@ static OSErr Validate_isma_attribute( HintInfoRec *hir, char *inValue)
 {
 #pragma unused(hir)
 	OSErr		err = noErr;
-	SInt32	profile, i;
+	int	profile, i;
 	float	lowest, authored;
 	
 	i = sscanf(inValue,"%d,%f,%f",&profile,&lowest,&authored);
@@ -2232,9 +2232,9 @@ static OSErr get_track_sample(TrackInfoRec *tir, UInt32 inSampleNum, Ptr *dataOu
 	UInt64		sampleOffset;
 
 	if (tir != NULL) {
-		BAILIFERR( err = GetSampleOffsetSize( tir, inSampleNum, &sampleOffset, sizeOut, sampleDescriptionIndexOut ) );
+		BAILIFERR( GetSampleOffsetSize( tir, inSampleNum, &sampleOffset, sizeOut, sampleDescriptionIndexOut ) );
 		BAILIFNIL( *dataOut = malloc(*sizeOut), allocFailedErr );
-		BAILIFERR( err = GetFileData( vg.fileaoe, *dataOut, sampleOffset, *sizeOut, nil ) );
+		BAILIFERR( GetFileData( vg.fileaoe, *dataOut, sampleOffset, *sizeOut, nil ) );
 	}
 bail:
 	return err;

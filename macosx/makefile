@@ -15,8 +15,8 @@
 # limitations under the License.
 #
 
-#CFLAGS = -g -DLITTLEENDIAN -Wno-multichar
-CFLAGS = -gdwarf-2 -Wno-multichar -DUSE_STRCASECMP -arch i386
+#CFLAGS = -g -DLITTLEENDIAN -Wno-multichar -arch i386
+CFLAGS = -gdwarf-2 -Wno-multichar -DUSE_STRCASECMP 
 PreprocessOptions = "-d forPublicRelease -d no3GP"
 
 SRCDIR = ../src

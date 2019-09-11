@@ -72,7 +72,7 @@ OSErr Validate_iods_Atom( atomOffsetEntry *aoe, void *refcon )
 	UInt32 flags;
 	UInt64 offset;
 	Ptr odDataP = nil;
-	unsigned long odSize;
+	UInt32 odSize;
 	
 	// Get version/flags
 	BAILIFERR( GetFullAtomVersionFlags( aoe, &version, &flags, &offset ) );
@@ -100,10 +100,10 @@ typedef struct MovieHeaderCommonRecord {
     Fixed                           preferredRate;              // must be 1.0 for mp4
 
     SInt16                          preferredVolume;           	// must be 1.0 for mp4
-    short                           reserved1;					// must be 0
+    int16_t                           reserved1;					// must be 0
 
-    long                            preferredLong1;				// must be 0 for mp4
-    long                            preferredLong2;				// must be 0 for mp4
+    uint32_t                            preferredLong1;				// must be 0 for mp4
+    uint32_t                            preferredLong2;				// must be 0 for mp4
 
     MatrixRecord                    matrix;						// must be identity for mp4
 
@@ -116,7 +116,7 @@ typedef struct MovieHeaderCommonRecord {
     TimeValue                       selectionDuration;  		// must be 0 for mp4
     TimeValue                       currentTime;          		// must be 0 for mp4
 
-    long                            nextTrackID;
+    uint32_t                            nextTrackID;
 } MovieHeaderCommonRecord;
 
 typedef struct MovieHeaderVers0Record {
@@ -2425,7 +2425,7 @@ OSErr Validate_ESDAtom( atomOffsetEntry *aoe, void *refcon, ValidateBitstreamPro
 	UInt32 flags;
 	UInt64 offset;
 	Ptr esDataP = nil;
-	unsigned long esSize;
+	UInt32 esSize;
 	BitBuffer bb;
 	
 	atomprint("<ESD"); vg.tabcnt++;
@@ -2645,7 +2645,7 @@ OSErr Validate_m4ds_Atom( atomOffsetEntry *aoe, void *refcon, char *esName )
 	OSErr err = noErr;
 	UInt64 offset;
 	Ptr esDataP = nil;
-	unsigned long esSize;
+	UInt32 esSize;
 	BitBuffer bb;
 	
 	atomprint("<m4ds>\n"); vg.tabcnt++;
@@ -2813,9 +2813,9 @@ OSErr Validate_loci_Atom( atomOffsetEntry *aoe, void *refcon )
 	
 	atomprint("role=\"%d\"\n", role );
 	
-	atomprint("longitude=\"%d.%d\"\n", lngi >> 16, ((UInt32) lngi) && 0xFFFF );
-	atomprint("latitude=\"%d.%d\"\n",  lati >> 16, ((UInt32) lati) && 0xFFFF );
-	atomprint("altitude=\"%d.%d\"\n",  alti >> 16, ((UInt32) alti) && 0xFFFF );
+	atomprint("longitude=\"%1.5f\"\n", lngi / 65536.0 );
+	atomprint("latitude=\"%1.5f\"\n",  lati / 65536.0 );
+	atomprint("altitude=\"%1.5f\"\n",  alti / 65536.0 );
 	
 
 	BAILIFERR( GetFileUTFString( aoe, &noticeP, offset, aoe->maxOffset - offset, &offset ) );

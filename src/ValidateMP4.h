@@ -22,6 +22,7 @@ limitations under the License.
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 #if defined(__GNUC__) && ( defined(__APPLE_CPP__) || defined(__APPLE_CC__) || defined(__MACOS_CLASSIC__) )
  #if defined(__i386__) || defined(__x86_64__) 
@@ -49,7 +50,7 @@ limitations under the License.
 #endif
 
 typedef char *Ptr;
-typedef unsigned long OSType;
+typedef uint32_t OSType;
 typedef unsigned char Boolean;
 typedef short OSErr;
 
@@ -63,12 +64,12 @@ enum {
 	kSkipUnknownAtoms = 1L<<0
 };
 
-typedef unsigned char UInt8;
-typedef char SInt8;
-typedef long SInt32;
-typedef unsigned long UInt32;
-typedef short SInt16;
-typedef unsigned short UInt16;
+typedef uint8_t UInt8;
+typedef int8_t SInt8;
+typedef int32_t SInt32;
+typedef uint32_t UInt32;
+typedef int16_t SInt16;
+typedef uint16_t UInt16;
 typedef UInt32 UnsignedFixed;
 
 typedef unsigned char uuidType[16];		// 128-bit uuid (guid)
@@ -76,8 +77,8 @@ typedef unsigned char uuidType[16];		// 128-bit uuid (guid)
 typedef unsigned __int64 UInt64;
 typedef __int64 SInt64;
 #else
-typedef unsigned long long UInt64;
-typedef long long SInt64;
+typedef uint64_t UInt64;
+typedef int64_t SInt64;
 #endif
 typedef UInt32 TimeValue;
 typedef UInt32 PriorityType;
@@ -111,7 +112,7 @@ typedef struct atomOffsetEntry {
 	UInt32		atomStartSize;	// size of id & size info, so it is easy to skip
 
 	UInt32 		aoeflags;			// used for processing	
-	UInt32 		refconOverride;		// used for processing	
+	void* 		refconOverride;		// used for processing	
 } atomOffsetEntry;
 
 enum {
@@ -132,7 +133,8 @@ enum {
 	badAtomErr = -2024,
 	atomOverRunErr = -2025,
 	badPublicMovieAtom = -2026,
-	dataSharedErr = -2027
+	dataSharedErr = -2027,
+	programErr = -2028
 };
 
 typedef struct {
@@ -389,7 +391,7 @@ typedef struct {
 extern ValidateGlobals vg;
 
 typedef struct AtomSizeType {
-	unsigned long atomSize;
+	UInt32 atomSize;
 	OSType atomType;
 } AtomSizeType;
 
